@@ -44,6 +44,34 @@ dotnet --info
 
 In this repository I have uploaded an MVC test project already configured.
 
+Create the service connected to the .NET app:
+```
+nano /etc/systemd/system/[YourAppName].service
+```
+
+Add the following configuration (replace "YourAppName"):
+```
+[Unit]
+Description=YourAppName
+
+[Service]
+WorkingDirectory=/var/www/app/
+ExecStart=/usr/bin/dotnet /var/www/app/YourAppName.dll
+Restart=always
+# Restart service after 10 seconds if the dotnet service crashes:
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=dotnet-YourAppName
+User=root
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+[Install]
+WantedBy=multi-user.target
+sudo systemctl enable [YourAppName].service
+sudo systemctl start [YourAppName].service
+```
+
 ### Static IP
 
 First you need to check the active network intefrastructure (e.g. eth0, enp0s3, etc...):
@@ -117,33 +145,91 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
+### Postgresql
 
-Create the service connected to the .NET app:
+Proceed with the installation of postgresql as the supporting db for the app:
 ```
-nano /etc/systemd/system/[YourAppName].service
+sudo apt install postgresql postgresql-contrib -y
 ```
 
-Add the following configuration (replace "YourAppName"):
+You should see that the service is running:
 ```
-[Unit]
-Description=YourAppName
+sudo systemctl status postgresql
+```
 
-[Service]
-WorkingDirectory=/var/www/app/
-ExecStart=/usr/bin/dotnet /var/www/app/YourAppName.dll
-Restart=always
-# Restart service after 10 seconds if the dotnet service crashes:
-RestartSec=10
-KillSignal=SIGINT
-SyslogIdentifier=dotnet-YourAppName
-User=root
-Environment=ASPNETCORE_ENVIRONMENT=Production
-Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+If it is not, start it:
+```
+sudo systemctl start postgresql
+```
 
-[Install]
-WantedBy=multi-user.target
-sudo systemctl enable [YourAppName].service
-sudo systemctl start [YourAppName].service
+And enable it at system startup:
+```
+sudo systemctl enable postgresql
+```
+
+Create a new user:
+```
+sudo -i -u postgres
+createuser user_name -P --interactive
+```
+
+You will be asked to enter a password for the user and to choose privileges.
+Create a new database associated with this user:
+```
+createdb database_name -O user_name
+```
+
+If you need to access PostgreSQL from another computer or want to change the authentication method.
+
+Edit the pg_hba.conf file:
+```
+sudo nano /etc/postgresql/*/main/pg_hba.conf
+```
+
+Change authentication method to md5 (to use password) or trust (for password-less, non-secure access).
+Change the postgresql.conf file to allow external connections:
+```
+sudo nano /etc/postgresql/*/main/postgresql.conf
+```
+
+Look for the line:
+```
+listen_addresses = 'localhost'
+```
+
+And change it to:
+```
+listen_addresses = '*'
+```
+
+Restart the PostgreSQL service:
+```
+sudo systemctl restart postgresql
+```
+
+You can verify that PostgreSQL is working properly with:
+```
+psql -U user_name -d database_name
+```
+
+Edit the authentication rules file:
+```
+sudo nano /etc/postgresql/*/main/pg_hba.conf
+```
+
+Add this line to allow remote connections with password authentication:
+```
+host all all 0.0.0.0/0 md5
+```
+
+0.0.0.0/0: Allows connections from any IP address. You can substitute it for a specific network, e.g. 192.168.1.0/24, if necessary.
+md5: Requires a password for connection.
+Save and close the file.
+
+
+Apply the changes by restarting the service:
+```
+sudo systemctl restart postgresql
 ```
 
 
