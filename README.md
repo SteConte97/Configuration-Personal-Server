@@ -78,6 +78,74 @@ Apply the changes:
 sudo netplan apply
 ```
 
+### NGINX
+
+Proceed with the installation of nginx as a reverse proxy:
+```
+sudo apt-get install nginx
+```
+
+Add file configuration:
+```
+sudo nano /etc/nginx/sites-available/app
+```
+
+Add the following configuration:
+```
+server {
+    listen 80;
+    server_name your-domain.com; # Or your public IP if you don't have a domain
+
+    location / {
+        proxy_pass http://localhost:5000;  # Redirects to the ASP.NET app
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection keep-alive;
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Activates the new configuration and deletes the default configuration:
+```
+sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+
+Create the service connected to the .NET app:
+```
+nano /etc/systemd/system/[YourAppName].service
+```
+
+Add the following configuration (replace "YourAppName"):
+```
+[Unit]
+Description=YourAppName
+
+[Service]
+WorkingDirectory=/var/www/app/
+ExecStart=/usr/bin/dotnet /var/www/app/YourAppName.dll
+Restart=always
+# Restart service after 10 seconds if the dotnet service crashes:
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=dotnet-YourAppName
+User=root
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+[Install]
+WantedBy=multi-user.target
+sudo systemctl enable [YourAppName].service
+sudo systemctl start [YourAppName].service
+```
+
 
 
 
