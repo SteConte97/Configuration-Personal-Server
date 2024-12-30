@@ -4,6 +4,8 @@
 
 This document is a comprehensive guide to setting up your own development server. Whether you are a technical expert or just a geek, this guide will walk you through the process of installing essential software tools such as .NET and PostgreSQL on an Ubuntu server. By the end of this guide, you will have a fully functional development workspace.
 
+I would like to point out that this guide is only a starting point, so I highly recommend that you always document all the commands and applications used in this guide.
+
 ## Description
 
 In this guide, you will find step-by-step instructions for installing the following components:
@@ -232,8 +234,25 @@ Apply the changes by restarting the service:
 sudo systemctl restart postgresql
 ```
 
+### Firewall
 
+Check firewall status:
+```
+sudo ufw status
+```
 
+If it is not active, activate it and configure the following rules (useful for the app, database and ssh):
+```
+sudo ufw allow 22
+sudo ufw allow 80
+sudo ufw allow 433
+sudo ufw allow 5432
+```
+
+Reload rules:
+```
+sudo ufw reload
+```
 
 
 
